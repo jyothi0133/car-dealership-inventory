@@ -55,3 +55,7 @@ class SaleResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class RestockCreate(BaseModel):
+    quantity: int

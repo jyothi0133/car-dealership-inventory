@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
 from app.database import engine, Base, get_db
-from app.models import User, Vehicle, Sale, SaleCreate, SaleResponse
+from app.models import User, Vehicle, Sale, SaleCreate, SaleResponse, RestockCreate
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -219,3 +219,61 @@ def create_sale(
     db.refresh(new_sale)
 
     return new_sale
+# --- Helper Dependency for Admin Protection ---
+def get_current_admin_user(current_user: User = Depends(get_current_user)):
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Admin privileges required"
+        )
+    return current_user
+
+
+# --- Search Endpoint ---
+@app.get("/api/vehicles/search", response_model=List[VehicleResponseSchema], status_code=status.HTTP_200_OK)
+def search_vehicles(
+    query: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    db: Session = Depends(get_db)
+):
+    q = db.query(Vehicle)
+    if query:
+        q = q.filter(
+            (Vehicle.make.ilike(f"%{query}%")) |
+            (Vehicle.model.ilike(f"%{query}%")) |
+            (Vehicle.category.ilike(f"%{query}%"))
+        )
+    if min_price is not None:
+        q = q.filter(Vehicle.price >= min_price)
+    if max_price is not None:
+        q = q.filter(Vehicle.price <= max_price)
+    
+    return q.all()
+
+
+# --- Restock Endpoint (Admin Only) ---
+@app.post("/api/vehicles/{vehicle_id}/restock", response_model=VehicleResponseSchema, status_code=status.HTTP_200_OK)
+def restock_vehicle(
+    vehicle_id: int,
+    restock_data: RestockCreate,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin_user)
+):
+    if restock_data.quantity <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Restock quantity must be greater than zero"
+        )
+        
+    vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+    if not vehicle:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vehicle not found"
+        )
+        
+    vehicle.quantity += restock_data.quantity
+    db.commit()
+    db.refresh(vehicle)
+    return vehicle
