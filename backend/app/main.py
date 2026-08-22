@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
 from app.database import engine, Base, get_db
-from app.models import User, Vehicle
+from app.models import User, Vehicle, Sale, SaleCreate, SaleResponse
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -18,7 +18,6 @@ app = FastAPI()
 SECRET_KEY = "supersecretkey_that_is_at_least_32_bytes_long"
 ALGORITHM = "HS256"
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # --- Security Dependency ---
@@ -39,6 +38,8 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     
     return user
+
+
 # --- Auth Schemas ---
 class RegisterSchema(BaseModel):
     username: str
@@ -48,6 +49,7 @@ class RegisterSchema(BaseModel):
 class LoginSchema(BaseModel):
     email: EmailStr
     password: str
+
 
 # --- Vehicle Schemas ---
 class VehicleCreateSchema(BaseModel):
@@ -67,6 +69,7 @@ class VehicleUpdateSchema(BaseModel):
     category: Optional[str] = None
     price: Optional[float] = None
     quantity: Optional[int] = None
+
 
 # --- Auth Endpoints ---
 @app.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
@@ -111,6 +114,7 @@ def login(credentials: LoginSchema, db: Session = Depends(get_db)):
         "access_token": token,
         "token_type": "bearer"
     }
+
 
 # --- Vehicle Endpoints ---
 @app.post("/api/vehicles", response_model=VehicleResponseSchema, status_code=status.HTTP_201_CREATED)
@@ -174,3 +178,44 @@ def delete_vehicle(
     db.delete(db_vehicle)
     db.commit()
     return {"message": "Vehicle deleted successfully"}
+
+
+# --- Sales Endpoints ---
+@app.post("/api/sales", response_model=SaleResponse, status_code=status.HTTP_201_CREATED)
+def create_sale(
+    sale_data: SaleCreate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # 1. Fetch vehicle
+    vehicle = db.query(Vehicle).filter(Vehicle.id == sale_data.vehicle_id).first()
+    if not vehicle:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Vehicle not found"
+        )
+
+    # 2. Check stock
+    if vehicle.quantity < sale_data.quantity:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Insufficient stock. Available: {vehicle.quantity}"
+        )
+
+    # 3. Deduct quantity and compute total
+    vehicle.quantity -= sale_data.quantity
+    calculated_total = vehicle.price * sale_data.quantity
+
+    # 4. Save sale record
+    new_sale = Sale(
+        vehicle_id=vehicle.id,
+        user_id=current_user.id,
+        quantity=sale_data.quantity,
+        total_price=calculated_total
+    )
+
+    db.add(new_sale)
+    db.commit()
+    db.refresh(new_sale)
+
+    return new_sale

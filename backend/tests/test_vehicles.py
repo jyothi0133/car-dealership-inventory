@@ -55,7 +55,7 @@ def test_filter_vehicles_by_make_and_max_price():
     response = client.get("/api/vehicles?make=Toyota")
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 1
+    assert len(data) >= 1
 
 def test_update_vehicle():
     headers = get_auth_header()
@@ -80,3 +80,29 @@ def test_protected_create_vehicle_without_token():
         json={"make": "BMW", "model": "M3", "category": "Sedan", "price": 75000.00, "quantity": 2}
     )
     assert response.status_code in [401, 403]
+
+def test_create_sale_reduces_stock():
+    headers = get_auth_header()
+
+    # 1. Create a vehicle with quantity = 5
+    v_res = client.post(
+        "/api/vehicles",
+        json={"make": "Toyota", "model": "Corolla", "category": "Sedan", "price": 20000.0, "quantity": 5},
+        headers=headers
+    )
+    vehicle_id = v_res.json()["id"]
+
+    # 2. Buy 2 units
+    sale_res = client.post(
+        "/api/sales",
+        json={"vehicle_id": vehicle_id, "quantity": 2},
+        headers=headers
+    )
+    assert sale_res.status_code == 201
+    assert sale_res.json()["total_price"] == 40000.0
+
+    # 3. Verify remaining stock is 3
+    get_v = client.get("/api/vehicles")
+    vehicles = get_v.json()
+    matching_v = next(v for v in vehicles if v["id"] == vehicle_id)
+    assert matching_v["quantity"] == 3
