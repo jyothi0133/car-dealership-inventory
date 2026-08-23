@@ -27,6 +27,18 @@ A production-ready, full-stack web application designed for car dealerships to m
 | **ORM & Database** | SQLAlchemy, SQLite3 |
 | **Version Control** | Git, GitHub |
 
+## My AI Usage
+
+### Tools Used
+- **Gemini (Google AI):** Primary collaborator for architecture design, TDD setup, code generation, and debugging.
+
+### How AI Was Leveraged
+- **Backend Architecture & TDD:** Brainstormed FastAPI endpoint design, SQLite ORM models, and wrote test cases using `pytest`.
+- **Frontend State Management:** Generated React component structures and `fetch` integration logic.
+- **Debugging & Styling:** Used AI to resolve CORS issues, layout text overlap, and contrast adjustments.
+
+### Reflection on AI Impact
+Using AI significantly accelerated boilerplate setup and allowed a strong focus on Test-Driven Development (TDD) and clean code architecture. Human oversight was critical to verify test outcomes, fix configuration paths, and ensure proper git execution.
 ---
 
 ## Repository Architecture
