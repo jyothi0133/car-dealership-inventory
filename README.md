@@ -1,10 +1,10 @@
-# 🚗 Car Dealership Inventory Management System
+# Car Dealership Inventory Management System
 
 A production-ready, full-stack web application designed for car dealerships to monitor, manage, and process vehicle inventory in real time. The project features a robust **FastAPI** REST backend powered by **SQLite** and **SQLAlchemy**, coupled with a responsive **React (Vite)** frontend interface.
 
 ---
 
-## 🌟 Application Features
+## Application Features
 
 - **Automated Database Seeding:** Pre-populates the database with 10 default vehicle entries upon startup to guarantee immediate visual data upon initial application launch.
 - **Real-Time Client-Side Search:** Instant multi-parameter filtering across make, model, category, and specifications.
@@ -18,7 +18,7 @@ A production-ready, full-stack web application designed for car dealerships to m
 
 ---
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 | Layer | Technology |
 | :--- | :--- |
@@ -29,7 +29,7 @@ A production-ready, full-stack web application designed for car dealerships to m
 
 ---
 
-## 📂 Repository Architecture
+## Repository Architecture
 
 ```text
 car-dealership-inventory/
